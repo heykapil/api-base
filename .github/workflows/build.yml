@@ -1,0 +1,62 @@
+name: Build Native ARM Base Image
+
+# This workflow is designed to run on a PUBLIC repository to take advantage
+# of GitHub's free native ARM64 runners, bypassing slow QEMU cross-compilation.
+
+on:
+  workflow_dispatch:
+    inputs:
+      patchright_version:
+        description: 'Patchright Version to install'
+        required: true
+        default: '^1.58.2'
+        type: string
+  push:
+    paths:
+      - 'Dockerfile.base'
+
+env:
+  REGISTRY: ghcr.io
+  # This defaults to the public repo name (e.g. heykapil/api-base).
+  # If you want to push directly to your private image's namespace, hardcode it:
+  # IMAGE_NAME: heykapil/api
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-native-arm:
+    # IMPORTANT: This label triggers GitHub's native ARM runners (Only free for public repos!)
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Notice we removed docker/setup-qemu-action entirely!
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # If pushing to a different repo's GHCR, use a PAT here instead of GITHUB_TOKEN
+          password: ${{ secrets.TOKEN_GITHUB }}
+      
+      - name: Lowercase Image Name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      - name: Build and push base image natively
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --build-arg PATCHRIGHT_VERSION=${{ inputs.patchright_version || '^1.58.2' }} \
+            --cache-from type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest \
+            --cache-to type=inline \
+            -f Dockerfile.base \
+            -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-base:latest \
+            --push .
+
