@@ -1,0 +1,20 @@
+FROM node:slim
+
+# Install curl, python3, ffmpeg
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl ca-certificates python3 ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install yt-dlp linux arm64 version
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64 -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp
+
+# Install patchright headless browser (chromium) and dependencies
+# Note: 'chrome' channel is NOT supported on Linux ARM64, use 'chromium' instead
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+ARG PATCHRIGHT_VERSION=latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb dbus dbus-x11 && \
+    npx patchright@${PATCHRIGHT_VERSION} install --with-deps chromium && \
+    rm -rf /var/lib/apt/lists/*
