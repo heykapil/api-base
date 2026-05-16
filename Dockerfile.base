@@ -12,9 +12,10 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_lin
 # Install patchright headless browser (chromium) and dependencies
 # Note: 'chrome' channel is NOT supported on Linux ARM64, use 'chromium' instead
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV DEBIAN_FRONTEND=noninteractive
 
 ARG PATCHRIGHT_VERSION=latest
 
-RUN apt-get update && apt-get install -y --no-install-recommends xvfb dbus dbus-x11 && \
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb dbus dbus-x11 unzip && \
     npx patchright@${PATCHRIGHT_VERSION} install --with-deps chromium && \
     rm -rf /var/lib/apt/lists/*
